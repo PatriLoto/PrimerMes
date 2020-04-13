@@ -77,6 +77,8 @@ Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx",
 
 # 2) Provincia: terminado el arreglo del pais borrar de la provincia aquellas que no pertenezcan a Argentina
 
+# 3) Se deben transformar las columnas que tienen mas de una opción como respuesta.  Buena excusa para usar pivot_longer y pivot_wider
+
 
 Pre_Inscripciones %>%
   group_by(pais) %>%
