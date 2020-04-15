@@ -1,3 +1,11 @@
+# El 16-4 cumplimos un mes. 
+# Post que estaria genial es uno con resumen de cuanta gente lleno el form de pre'inscripcion, 
+# de donde son (cantidad de ciudades, provincias, paises)
+# a cuantos dimos cursos y a cuantos daremos... un 
+# resumen sencillito, pero poderoso para publicar al mes y 
+# contando que arrancamos el 16, pero recien el 23 abrimos el formulario y recien el ... dimos el primer curso.
+
+
 library(tidyverse)
 library(readxl)
 
@@ -80,16 +88,22 @@ Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx",
 # 3) Se deben transformar las columnas que tienen mas de una opción como respuesta.  Buena excusa para usar pivot_longer y pivot_wider
 
 
-Pre_Inscripciones %>%
+Paises <- Pre_Inscripciones %>%
   group_by(pais) %>%
   summarise(cantidad = n()) %>%
-  select(pais, cantidad)
+  select(pais, cantidad)%>%
+  arrange(desc(cantidad))
 
-Pre_Inscripciones %>%
+Ciudades <- Pre_Inscripciones %>%
   group_by(provincia_mayor_cantidad_horas_clase) %>%
   summarise(cantidad = n()) %>%
   select(provincia_mayor_cantidad_horas_clase, cantidad) %>%
   arrange(desc(cantidad))
   
+alumnos <- Pre_Inscripciones %>%
+  group_by(asistio) %>%
+  summarise(cantidad = n()) 
 
-  
+fechas <- Pre_Inscripciones %>%
+  group_by(mail_enviado_para_el_curso_del) %>%
+  summarise(cantidad = n())    
