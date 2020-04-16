@@ -107,3 +107,37 @@ alumnos <- Pre_Inscripciones %>%
 fechas <- Pre_Inscripciones %>%
   group_by(mail_enviado_para_el_curso_del) %>%
   summarise(cantidad = n())    
+
+disciplinas <- Pre_Inscripciones %>%
+  select(disciplinas_docencia) %>%
+  separate(col=disciplinas_docencia, into= c("diciplina1","diciplina2","diciplina3","diciplina4", "diciplina5",
+             "diciplina6","diciplina7","diciplina8","diciplina9", "diciplina10",
+             "diciplina11","diciplina12","diciplina13","diciplina14", "diciplina15",
+             "diciplina16","diciplina17","diciplina18","diciplina19", "diciplina20"), sep=",") %>%
+  pivot_longer(
+    cols = diciplina1:diciplina20,
+    names_to = "col",
+    values_to = "disciplina"
+  ) %>%
+  mutate(disciplina = str_trim(disciplina, side = "both"))%>%
+  filter(!is.na(disciplina))%>%
+  group_by(disciplina) %>%
+  summarise(cantidad = n())  
+
+
+disciplinas %>%
+  summarise(sum(cantidad))
+
+
+tibble(disciplina = c("Ingenieria","Exactas","Naturales","Salud","Economicas","Humanidades","Sociales"),
+                             porcentaje = c(14,23,21,7,5,20,10)) %>%
+  mutate(disciplina = fct_reorder(disciplina, porcentaje)) %>%
+  ggplot(aes(disciplina,porcentaje)) +
+  geom_bar(stat = "identity",fill="#c83737") +
+  ggtitle("Disciplinas que enseñan los docentes que tomaron nuestros cursos")+
+  xlab("") +
+  ylab("Porcentaje(%)") +
+  coord_flip() 
+
+Pre_Inscripciones %>%
+  summarise(sum(cantidad_estudiantes))
