@@ -134,7 +134,7 @@ tibble(disciplina = c("Ingenieria","Exactas","Naturales","Salud","Economicas","H
   mutate(disciplina = fct_reorder(disciplina, porcentaje)) %>%
   ggplot(aes(disciplina,porcentaje)) +
   geom_bar(stat = "identity",fill="#c83737") +
-  ggtitle("Disciplinas que enseñan los docentes que tomaron nuestros cursos")+
+  ggtitle("Disciplinas que enseñan quienes tomaron nuestro taller")+
   xlab("") +
   ylab("Porcentaje(%)") +
   coord_flip() 
