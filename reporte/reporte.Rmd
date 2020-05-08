@@ -1,0 +1,207 @@
+---
+title: "Reporte Mensual"
+author: "MetaDocencia"
+date: "7/5/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(readxl)
+library(here)
+library(rnaturalearth)
+library(ggthemes)
+library(sf)
+library(lubridate)
+
+encuesta_fin_cursos <- read_excel(here::here("data", "Encuesta_fin_cursos.xlsx"),
+                                  skip = 1,
+                                  col_names = c("marca_temporal",
+                                                "positivo",
+                                                "a_mejorar"))
+
+
+pre_inscripciones <- read_excel(here::here("data", "Pre-Inscripciones.xlsx"), 
+                                sheet = "Respuestas de formulario 1", 
+                                skip = 1,
+                                col_names = c("marca_temporal",
+                                              "email",
+                                              "nombre_apellido",
+                                              "institucion",
+                                              "pais",
+                                              "provincia_mayor_cantidad_horas_clase",
+                                              "nivel_educativo",
+                                              "da_clase",
+                                              "anios_dando_clase",
+                                              "gestion",
+                                              "creencias_docencia",
+                                              "a_cargo_clase",
+                                              "inicio_clase",
+                                              "cantidad_estudiantes",
+                                              "disciplinas_docencia",
+                                              "celular",
+                                              "tablet",
+                                              "laptop_computadora_portatil",
+                                              "google_drive",
+                                              "google_forms",
+                                              "google_docs",
+                                              "whatsapp",
+                                              "telegram",
+                                              "slack",
+                                              "campus_virtual_moodle",
+                                              "google_classroom",
+                                              "zoom",
+                                              "skype",
+                                              "plataforma_comunicación_online",
+                                              "facebook",
+                                              "twitter",
+                                              "instagram",
+                                              "youtube",
+                                              "acceso_internet",
+                                              "barrera_tecnológica",
+                                              "habilidad_teclado_compu",
+                                              "discapacidad_impedimento",
+                                              "cursos_selecionados",
+                                              "franja_horaria",
+                                              "interes_otros_cursos",
+                                              "curso_para_docencia_online_otro_tema",
+                                              "contribuir_desarrollo_cursos",
+                                              "noticias",
+                                              "otra_info",
+                                              "semana_maniana",
+                                              "semana_tarde",
+                                              "sabado_maniana",
+                                              "sabado_tarde",
+                                              "otro",
+                                              "mail_pra_el_curso_del",
+                                              "mail_enviado_para_el_curso_del",
+                                              "aviso_que_no_asiste",
+                                              "asistio",
+                                              "no_asistio_razon",
+                                              "mailchimp"
+                                ))
+
+
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+paises <- pre_inscripciones %>%
+  group_by(pais) %>%
+  summarise(cantidad = n()) %>%
+  select(pais, cantidad)%>%
+  arrange(desc(cantidad)) 
+
+paises_metadocencia <- paises %>%
+  drop_na() %>%
+  pull(pais)
+
+ciudades <- pre_inscripciones %>%
+  group_by(provincia_mayor_cantidad_horas_clase) %>%
+  summarise(cantidad = n()) %>%
+  select(provincia_mayor_cantidad_horas_clase, cantidad) %>%
+  arrange(desc(cantidad))
+
+alumnos <- pre_inscripciones %>%
+  group_by(asistio) %>%
+  summarise(cantidad = n()) 
+
+asistieron <- alumnos %>%
+  filter(str_detect(asistio, "1") | str_detect(asistio, "2"))%>%
+  summarise(total = sum(cantidad)) %>%
+  unlist()
+
+interes <- alumnos %>%
+  summarise(total = sum(cantidad)) %>%
+  unlist()
+
+fechas <- pre_inscripciones %>%
+  group_by(mail_enviado_para_el_curso_del) %>%
+  summarise(cantidad = n())    
+
+disciplinas <- pre_inscripciones %>%
+  select(disciplinas_docencia) %>%
+  separate(col=disciplinas_docencia, into= c("diciplina1","diciplina2","diciplina3","diciplina4", "diciplina5",
+                                             "diciplina6","diciplina7","diciplina8","diciplina9", "diciplina10",
+                                             "diciplina11","diciplina12","diciplina13","diciplina14", "diciplina15",
+                                             "diciplina16","diciplina17","diciplina18","diciplina19", "diciplina20"), sep=",") %>%
+  pivot_longer(
+    cols = diciplina1:diciplina20,
+    names_to = "col",
+    values_to = "disciplina"
+  ) %>%
+  mutate(disciplina = str_trim(disciplina, side = "both"))%>%
+  filter(!is.na(disciplina))%>%
+  group_by(disciplina) %>%
+  summarise(cantidad = n())  
+
+```
+
+Metadocencia nace de una necesidad, pero sobre todo de la capacidad y ganas de ayudar. La comunidad ya cuenta con alrededor de `r signif(interes,digits = 2)` profesionales que se sumaron a la propuesta desde distintas partes del mundo.
+
+A `r lubridate::month(lubridate::today()) - 3`  meses del comienzo, la comunidad cuenta con `r asistieron` docentes que ya tomaron este curso y que, sumado a más de `r (interes - asistieron)` que ya se preinscribieron, hacen más de `r interes` profesionales que se sumaron a la iniciativa.
+
+
+```{r mapamundo, echo=FALSE, message=FALSE, warning=FALSE}
+mapamundi = ne_countries(scale = "medium", returnclass = "sf") 
+
+mapping_paisES_iso3 <- read_csv(here::here("data", "mapping_ES_iso.csv"))
+
+mapamundi <- mapamundi %>%
+  mutate(metadocencia = iso_a3 %in% pull(filter(mapping_paisES_iso3, pais %in% paises_metadocencia), iso))
+
+
+
+ggplot() +
+  geom_sf(data = mapamundi, alpha = 1, aes(fill = metadocencia), color = "gray") +
+  theme_map() +
+  labs(title = paste0("Demostraron interés ", interes, " docentes de ", length(paises_metadocencia), " paises"),
+       subtitle = "",
+       x = "",
+       y = "") +
+  scale_fill_manual(values = c("gray88", "#c83737")) +
+  ylim(-55, 90) +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold")) 
+  #scale_color_gradient(low = "blue", high = "red", limits=c(6, 9), breaks=seq(6, 9, by=1)) +
+  #guides(color= guide_legend(), size=guide_legend()) +
+  #scale_size_continuous(limits=c(6, 9), breaks=seq(6, 9, by=1)) +
+  #theme(text = element_text(family = "Courier New"))
+```
+
+
+```{r datosargentina, message=FALSE, warning=FALSE, include=FALSE}
+# download Provincias shapefile from:
+# https://datos.gob.ar/dataset/ign-unidades-territoriales/archivo/ign_01.02.02
+mapaargentina <- st_read(here::here("data", "ign_provincia.shp")) 
+
+provincias_argentinas <- ciudades %>% 
+  filter(provincia_mayor_cantidad_horas_clase %in% mapaargentina$NAM) %>%
+  pull(provincia_mayor_cantidad_horas_clase)
+
+mapaargentina <- mapaargentina %>%
+  left_join(ciudades, by = c("NAM" = "provincia_mayor_cantidad_horas_clase"))
+
+
+```
+
+
+```{r mapaargentina, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = mapaargentina, alpha = 1, aes(fill = !is.na(cantidad)), color = "gray") +
+  theme_map() +
+  labs(title = paste0("Ya participaron docentes de ", length(provincias_argentinas), " provincias argentinas"),
+       subtitle = "",
+       x = "",
+       y = "") +
+  scale_fill_manual(values = c("gray88", "#c83737")) +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold")) +
+  ylim(-55,-20)
+```
+
