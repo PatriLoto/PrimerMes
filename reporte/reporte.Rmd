@@ -3,8 +3,8 @@ title: "Reporte Mensual"
 author: "MetaDocencia"
 date: "7/5/2020"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -23,7 +23,6 @@ encuesta_fin_cursos <- read_excel(here::here("data", "Encuesta_fin_cursos.xlsx")
                                   col_names = c("marca_temporal",
                                                 "positivo",
                                                 "a_mejorar"))
-
 
 pre_inscripciones <- read_excel(here::here("data", "Pre-Inscripciones.xlsx"), 
                                 sheet = "Respuestas de formulario 1", 
@@ -80,6 +79,7 @@ pre_inscripciones <- read_excel(here::here("data", "Pre-Inscripciones.xlsx"),
                                               "mail_pra_el_curso_del",
                                               "mail_enviado_para_el_curso_del",
                                               "aviso_que_no_asiste",
+                                              "se_volvio_a_invitar",
                                               "asistio",
                                               "no_asistio_razon",
                                               "mailchimp"
@@ -105,7 +105,9 @@ ciudades <- pre_inscripciones %>%
   group_by(provincia_mayor_cantidad_horas_clase) %>%
   summarise(cantidad = n()) %>%
   select(provincia_mayor_cantidad_horas_clase, cantidad) %>%
+  mutate(provincia_mayor_cantidad_horas_clase = ifelse(provincia_mayor_cantidad_horas_clase == "Tierra del Fuego", "Tierra del Fuego, Antártida e Islas del Atlántico Sur", provincia_mayor_cantidad_horas_clase)) %>%
   arrange(desc(cantidad))
+
 
 alumnos <- pre_inscripciones %>%
   group_by(asistio) %>%
@@ -168,40 +170,5 @@ ggplot() +
   ylim(-55, 90) +
   theme(legend.position = "none",
         plot.title = element_text(face = "bold")) 
-  #scale_color_gradient(low = "blue", high = "red", limits=c(6, 9), breaks=seq(6, 9, by=1)) +
-  #guides(color= guide_legend(), size=guide_legend()) +
-  #scale_size_continuous(limits=c(6, 9), breaks=seq(6, 9, by=1)) +
-  #theme(text = element_text(family = "Courier New"))
-```
-
-
-```{r datosargentina, message=FALSE, warning=FALSE, include=FALSE}
-# download Provincias shapefile from:
-# https://datos.gob.ar/dataset/ign-unidades-territoriales/archivo/ign_01.02.02
-mapaargentina <- st_read(here::here("data", "ign_provincia.shp")) 
-
-provincias_argentinas <- ciudades %>% 
-  filter(provincia_mayor_cantidad_horas_clase %in% mapaargentina$NAM) %>%
-  pull(provincia_mayor_cantidad_horas_clase)
-
-mapaargentina <- mapaargentina %>%
-  left_join(ciudades, by = c("NAM" = "provincia_mayor_cantidad_horas_clase"))
-
 
 ```
-
-
-```{r mapaargentina, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot() +
-  geom_sf(data = mapaargentina, alpha = 1, aes(fill = !is.na(cantidad)), color = "gray") +
-  theme_map() +
-  labs(title = paste0("Ya participaron docentes de ", length(provincias_argentinas), " provincias argentinas"),
-       subtitle = "",
-       x = "",
-       y = "") +
-  scale_fill_manual(values = c("gray88", "#c83737")) +
-  theme(legend.position = "none",
-        plot.title = element_text(face = "bold")) +
-  ylim(-55,-20)
-```
-
