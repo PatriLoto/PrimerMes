@@ -145,9 +145,9 @@ disciplinas <- pre_inscripciones %>%
 
 ```
 
-Metadocencia nace de una necesidad, pero sobre todo de la capacidad y ganas de ayudar. La comunidad ya cuenta con alrededor de `r signif(interes,digits = 2)` profesionales que se sumaron a la propuesta desde distintas partes del mundo.
+Metadocencia nace de una necesidad, pero sobre todo de la capacidad y ganas de ayudar. La comunidad ya cuenta con `r signif(interes,digits = 2)` profesionales que se sumaron a la propuesta desde distintas partes del mundo.
 
-A `r lubridate::month(lubridate::today()) - 3`  meses del comienzo, la comunidad cuenta con `r asistieron` docentes que ya tomaron este curso y que, sumado a más de `r (interes - asistieron)` que ya se preinscribieron, hacen más de `r interes` profesionales que se sumaron a la iniciativa.
+A `r lubridate::month(lubridate::today()) - 3`  meses del comienzo, la comunidad cuenta con `r asistieron` docentes que ya tomaron este curso y que, sumado a más de `r (interes - asistieron)` que ya se preinscribieron, hacen más de `r interes` profesionales que son parte de la iniciativa.
 
 
 ```{r mapamundo, echo=FALSE, message=FALSE, warning=FALSE}
