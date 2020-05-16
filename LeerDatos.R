@@ -76,19 +76,7 @@ Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx",
                                               "asistio",
                                               "no_asistio_razon",
                                               "mailchimp"
-)) %>% 
-  mutate(provincia_mayor_cantidad_horas_clase = if_else(pais != "Argentina", NA_character_, provincia_mayor_cantidad_horas_clase))
-
-nmax <- max(stringr::str_count(test$creencias_docencia, "\\,")) + 1
-test <- select(Pre_Inscripciones, creencias_docencia) %>% 
-  separate(creencias_docencia, 
-           into = paste0("creencia_", seq_len(nmax)), 
-           sep = ",", 
-           extra = "merge",
-           remove = TRUE) %>% 
-  pivot_longer(cols = starts_with("creencia"), values_drop_na = TRUE) %>% 
-  mutate( value = str_trim(value, "both")) %>% 
-  distinct(value)
+)) 
 
 
 # Es necesario limpiar las columnas:
