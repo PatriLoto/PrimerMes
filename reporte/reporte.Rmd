@@ -161,7 +161,7 @@ mapamundi <- mapamundi %>%
 
 
 ggplot() +
-  geom_sf(data = mapamundi, alpha = 1, aes(fill = metadocencia), color = "gray") +
+  geom_sf(data = mapamundi, alpha = 1, aes(fill = metadocencia), color = "gray", size = 0.3) +
   theme_map() +
   labs(title = paste0("Demostraron interés ", interes, " docentes de ", length(paises_metadocencia), " paises"),
        subtitle = "",
@@ -172,4 +172,39 @@ ggplot() +
   theme(legend.position = "none",
         plot.title = element_text(face = "bold")) 
 
+ggsave("mapa_mundo.png", dpi = 300, height = 5, width = 8)
 ```
+
+```{r mapaargentina}
+# download Provincias shapefile from:
+# https://datos.gob.ar/dataset/ign-unidades-territoriales/archivo/ign_01.02.02
+mapaargentina <- st_read(here::here("data", "ign_provincia.shp")) 
+
+provincias_argentinas <- ciudades %>% 
+  filter(provincia_mayor_cantidad_horas_clase %in% mapaargentina$NAM) %>%
+  pull(provincia_mayor_cantidad_horas_clase)
+
+mapaargentina <- mapaargentina %>%
+  left_join(ciudades, by = c("NAM" = "provincia_mayor_cantidad_horas_clase")) %>%
+  mutate(cantidad = ifelse(is.na(cantidad), 0, cantidad))
+
+mapaargentina$breaks <- cut(mapaargentina$cantidad, 
+                   breaks=c(1, max(mapaargentina$cantidad)/4, max(mapaargentina$cantidad)/2, max(mapaargentina$cantidad)*3/4, max(mapaargentina$cantidad)),
+                   labels=c("1.0 - 10.2", "10.2 - 19.4", "19.4 - 28.6", 
+                            "28.6 - 37.8"))
+
+ggplot() +
+  geom_sf(data = mapaargentina, alpha = 1, aes(fill = cantidad), color = "gray") +
+  labs(title = paste0("Ya participaron docentes de ", length(provincias_argentinas), " provincias argentinas"),
+       x = "",
+       y = "") +
+  scale_fill_gradient(low = "#c79f9f", high = "#c83737",limits = c(0, 100), oob = scales::squish) +
+  geom_sf(data = filter(mapaargentina, NAM == "Chubut"), alpha = 1, fill = "gray88", color = "gray") +
+  coord_sf(ylim = c(-55,-21), xlim = c(-74, -52), expand = FALSE)  +
+  theme_map(base_family = "Source Sans Pro", base_size = 12) + 
+  theme(plot.title = element_text(face = "bold", size = 14,hjust = 0.5),
+        legend.position = "none") 
+
+ggsave("mapa_argentina.png", dpi = 300, height = 7, width = 6)
+```
+
