@@ -1,22 +1,30 @@
-# El 16-4 cumplimos un mes. 
-# Post que estaria genial es uno con resumen de cuanta gente lleno el form de pre'inscripcion, 
-# de donde son (cantidad de ciudades, provincias, paises)
-# a cuantos dimos cursos y a cuantos daremos... un 
-# resumen sencillito, pero poderoso para publicar al mes y 
-# contando que arrancamos el 16, pero recien el 23 abrimos el formulario y recien el ... dimos el primer curso.
+---
+title: "Reporte Mensual"
+author: "MetaDocencia"
+date: "7/5/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 
 library(tidyverse)
 library(readxl)
+library(here)
+library(rnaturalearth)
+library(ggthemes)
+library(sf)
+library(lubridate)
 
-Encuesta_fin_cursos <- read_excel("Encuesta_fin_de_curso.xlsx",
+encuesta_fin_cursos <- read_excel(here::here("data", "Encuesta_fin_cursos.xlsx"),
                                   skip = 1,
                                   col_names = c("marca_temporal",
                                                 "positivo",
                                                 "a_mejorar"))
 
-
-Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx", 
+pre_inscripciones <- read_excel(here::here("data", "Pre-Inscripciones.xlsx"), 
                                 sheet = "Respuestas de formulario 1", 
                                 skip = 1,
                                 col_names = c("marca_temporal",
@@ -76,59 +84,55 @@ Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx",
                                               "asistio",
                                               "no_asistio_razon",
                                               "mailchimp"
-)) %>% 
-  mutate(provincia_mayor_cantidad_horas_clase = if_else(pais != "Argentina", NA_character_, provincia_mayor_cantidad_horas_clase))
-
-nmax <- max(stringr::str_count(test$creencias_docencia, "\\,")) + 1
-test <- select(Pre_Inscripciones, creencias_docencia) %>% 
-  separate(creencias_docencia, 
-           into = paste0("creencia_", seq_len(nmax)), 
-           sep = ",", 
-           extra = "merge",
-           remove = TRUE) %>% 
-  pivot_longer(cols = starts_with("creencia"), values_drop_na = TRUE) %>% 
-  mutate( value = str_trim(value, "both")) %>% 
-  distinct(value)
-
-
-# Es necesario limpiar las columnas:
-
-# 1) Pais: ver si a partir del dato en la columna de provincia podemos completar a que país pertenecen, 
-# si es NA vamos a asumir que es Argentina, ya que al inicio el formulario no tenia el país como dato
-
-# 2) Provincia: terminado el arreglo del pais borrar de la provincia aquellas que no pertenezcan a Argentina
-
-# 3) Se deben transformar las columnas que tienen mas de una opción como respuesta.  Buena excusa para usar pivot_longer y pivot_wider
+                                ))
 
 
 
+```
 
-Paises <- Pre_Inscripciones %>%
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+paises <- pre_inscripciones %>%
   group_by(pais) %>%
   summarise(cantidad = n()) %>%
   select(pais, cantidad)%>%
-  arrange(desc(cantidad))
+  arrange(desc(cantidad)) 
 
-Ciudades <- Pre_Inscripciones %>%
+paises_metadocencia <- paises %>%
+  drop_na() %>%
+  pull(pais)
+
+ciudades <- pre_inscripciones %>%
   group_by(provincia_mayor_cantidad_horas_clase) %>%
   summarise(cantidad = n()) %>%
   select(provincia_mayor_cantidad_horas_clase, cantidad) %>%
+  mutate(provincia_mayor_cantidad_horas_clase = ifelse(provincia_mayor_cantidad_horas_clase == "Tierra del Fuego", "Tierra del Fuego, Antártida e Islas del Atlántico Sur", provincia_mayor_cantidad_horas_clase)) %>%
   arrange(desc(cantidad))
-  
-alumnos <- Pre_Inscripciones %>%
+
+
+alumnos <- pre_inscripciones %>%
   group_by(asistio) %>%
   summarise(cantidad = n()) 
 
-fechas <- Pre_Inscripciones %>%
+asistieron <- alumnos %>%
+  filter(str_detect(asistio, "1") | str_detect(asistio, "2"))%>%
+  summarise(total = sum(cantidad)) %>%
+  unlist()
+
+interes <- alumnos %>%
+  summarise(total = sum(cantidad)) %>%
+  unlist()
+
+fechas <- pre_inscripciones %>%
   group_by(mail_enviado_para_el_curso_del) %>%
   summarise(cantidad = n())    
 
-disciplinas <- Pre_Inscripciones %>%
+disciplinas <- pre_inscripciones %>%
   select(disciplinas_docencia) %>%
   separate(col=disciplinas_docencia, into= c("diciplina1","diciplina2","diciplina3","diciplina4", "diciplina5",
-             "diciplina6","diciplina7","diciplina8","diciplina9", "diciplina10",
-             "diciplina11","diciplina12","diciplina13","diciplina14", "diciplina15",
-             "diciplina16","diciplina17","diciplina18","diciplina19", "diciplina20"), sep=",") %>%
+                                             "diciplina6","diciplina7","diciplina8","diciplina9", "diciplina10",
+                                             "diciplina11","diciplina12","diciplina13","diciplina14", "diciplina15",
+                                             "diciplina16","diciplina17","diciplina18","diciplina19", "diciplina20"), sep=",") %>%
   pivot_longer(
     cols = diciplina1:diciplina20,
     names_to = "col",
@@ -139,20 +143,33 @@ disciplinas <- Pre_Inscripciones %>%
   group_by(disciplina) %>%
   summarise(cantidad = n())  
 
+```
 
-disciplinas %>%
-  summarise(sum(cantidad))
+Metadocencia nace de una necesidad, pero sobre todo de la capacidad y ganas de ayudar. La comunidad ya cuenta con `r signif(interes,digits = 2)` profesionales que se sumaron a la propuesta desde distintas partes del mundo.
+
+A `r lubridate::month(lubridate::today()) - 3`  meses del comienzo, la comunidad cuenta con `r asistieron` docentes que ya tomaron este curso y que, sumado a más de `r (interes - asistieron)` que ya se preinscribieron, hacen más de `r interes` profesionales que son parte de la iniciativa.
 
 
-tibble(disciplina = c("Ingenieria","Exactas","Naturales","Salud","Economicas","Humanidades","Sociales"),
-                             porcentaje = c(14,23,21,7,5,20,10)) %>%
-  mutate(disciplina = fct_reorder(disciplina, porcentaje)) %>%
-  ggplot(aes(disciplina,porcentaje)) +
-  geom_bar(stat = "identity",fill="#c83737") +
-  ggtitle("Disciplinas que enseñan quienes tomaron nuestro taller")+
-  xlab("") +
-  ylab("Porcentaje(%)") +
-  coord_flip() 
+```{r mapamundo, echo=FALSE, message=FALSE, warning=FALSE}
+mapamundi = ne_countries(scale = "medium", returnclass = "sf") 
 
-Pre_Inscripciones %>%
-  summarise(sum(cantidad_estudiantes))
+mapping_paisES_iso3 <- read_csv(here::here("data", "mapping_ES_iso.csv"))
+
+mapamundi <- mapamundi %>%
+  mutate(metadocencia = iso_a3 %in% pull(filter(mapping_paisES_iso3, pais %in% paises_metadocencia), iso))
+
+
+
+ggplot() +
+  geom_sf(data = mapamundi, alpha = 1, aes(fill = metadocencia), color = "gray") +
+  theme_map() +
+  labs(title = paste0("Demostraron interés ", interes, " docentes de ", length(paises_metadocencia), " paises"),
+       subtitle = "",
+       x = "",
+       y = "") +
+  scale_fill_manual(values = c("gray88", "#c83737")) +
+  ylim(-55, 90) +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold")) 
+
+```
