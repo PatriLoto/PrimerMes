@@ -9,7 +9,7 @@
 library(tidyverse)
 library(readxl)
 
-Encuesta_fin_cursos <- read_excel("Encuesta_fin_cursos.xlsx",
+Encuesta_fin_cursos <- read_excel("Encuesta_fin_de_curso.xlsx",
                                   skip = 1,
                                   col_names = c("marca_temporal",
                                                 "positivo",
@@ -76,8 +76,7 @@ Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx",
                                               "asistio",
                                               "no_asistio_razon",
                                               "mailchimp"
-))
-
+)) 
 
 
 # Es necesario limpiar las columnas:
@@ -88,6 +87,8 @@ Pre_Inscripciones <- read_excel("Pre-Inscripciones.xlsx",
 # 2) Provincia: terminado el arreglo del pais borrar de la provincia aquellas que no pertenezcan a Argentina
 
 # 3) Se deben transformar las columnas que tienen mas de una opción como respuesta.  Buena excusa para usar pivot_longer y pivot_wider
+
+
 
 
 Paises <- Pre_Inscripciones %>%

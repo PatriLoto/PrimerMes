@@ -17,6 +17,7 @@ library(rnaturalearth)
 library(ggthemes)
 library(sf)
 library(lubridate)
+library(extrafont)
 
 encuesta_fin_cursos <- read_excel(here::here("data", "Encuesta_fin_cursos.xlsx"),
                                   skip = 1,
@@ -127,7 +128,74 @@ fechas <- pre_inscripciones %>%
   group_by(mail_enviado_para_el_curso_del) %>%
   summarise(cantidad = n())    
 
+```
+
+Metadocencia nace de una necesidad, pero sobre todo de la capacidad y ganas de ayudar. La comunidad ya cuenta con `r signif(interes,digits = 2)` profesionales que se sumaron a la propuesta desde distintas partes del mundo.
+
+A `r lubridate::month(lubridate::today()) - 3`  meses del comienzo, la comunidad cuenta con `r asistieron` docentes que ya tomaron este curso y que, sumado a más de `r (interes - asistieron)` que ya se preinscribieron, hacen más de `r interes` profesionales que son parte de la iniciativa.
+
+
+```{r mapamundo, message=FALSE, warning=FALSE, include=FALSE}
+mapamundi = ne_countries(scale = "medium", returnclass = "sf") 
+
+mapping_paisES_iso3 <- read_csv(here::here("data", "mapping_ES_iso.csv"))
+
+mapamundi <- mapamundi %>%
+  mutate(metadocencia = iso_a3 %in% pull(filter(mapping_paisES_iso3, pais %in% paises_metadocencia), iso))
+```
+
+```{r echo=FALSE, fig.align="left", message=FALSE, warning=FALSE, fig.align="left"}
+ggplot() +
+  geom_sf(data = mapamundi, alpha = 1, aes(fill = metadocencia), color = "gray", size = 0.3) +
+  theme_map() +
+  labs(title = paste0("Demostraron interés ", interes, " docentes de ", length(paises_metadocencia), " paises"),
+       subtitle = "",
+       x = "",
+       y = "") +
+  scale_fill_manual(values = c("gray88", "#c83737")) +
+  ylim(-55, 90) +
+  theme(legend.position = "none",
+        plot.title = element_text(family = "Arial Rounded MT Bold", face = "bold")) 
+
+ggsave("mapa_mundo.png", dpi = 400, height = 5, width = 8)
+```
+
+```{r argentina, include=FALSE}
+# download Provincias shapefile from:
+# https://datos.gob.ar/dataset/ign-unidades-territoriales/archivo/ign_01.02.02
+mapaargentina <- st_read(here::here("data", "ign_provincia.shp")) 
+
+provincias_argentinas <- ciudades %>% 
+  filter(provincia_mayor_cantidad_horas_clase %in% mapaargentina$NAM) %>%
+  pull(provincia_mayor_cantidad_horas_clase)
+
+mapaargentina <- mapaargentina %>%
+  left_join(ciudades, by = c("NAM" = "provincia_mayor_cantidad_horas_clase")) %>%
+  mutate(cantidad = ifelse(is.na(cantidad), 0, cantidad))
+```
+
+
+```{r mapaargentina, echo=FALSE, fig.align="left", message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = mapaargentina, alpha = 1, aes(fill = cantidad), color = "gray") +
+  labs(title = paste0("Ya participaron docentes de ", length(provincias_argentinas) - 1, " provincias argentinas"),
+       x = "",
+       y = "") +
+  scale_fill_gradient(low = "#c79f9f", high = "#c83737",limits = c(0, 100), oob = scales::squish) +
+  geom_sf(data = filter(mapaargentina, NAM == "Chubut"), alpha = 1, fill = "gray88", color = "gray") +
+  coord_sf(ylim = c(-55,-21), xlim = c(-74, -52), expand = FALSE)  +
+  theme_map() + 
+  theme(plot.title = element_text(family = "Arial Rounded MT Bold", face = "bold",hjust = 0),
+        legend.position = "none") 
+ggsave("mapa_argentina.png", dpi = 400, height = 8, width = 5)
+```
+
+
+Los docentes que tomaron nuestro curso dictan cursos de variadas disciplinas. Desde las clásicas Biología, Lengua y Matemáticas hasta Robótica y Traumatología pasando por Marketing y Arquitectura.
+
+```{r, message=FALSE, warning=FALSE, fig.align="left"}
 disciplinas <- pre_inscripciones %>%
+  mutate(disciplinas_docencia = str_to_lower(disciplinas_docencia)) %>%
   select(disciplinas_docencia) %>%
   separate(col=disciplinas_docencia, into= c("diciplina1","diciplina2","diciplina3","diciplina4", "diciplina5",
                                              "diciplina6","diciplina7","diciplina8","diciplina9", "diciplina10",
@@ -139,37 +207,54 @@ disciplinas <- pre_inscripciones %>%
     values_to = "disciplina"
   ) %>%
   mutate(disciplina = str_trim(disciplina, side = "both"))%>%
-  filter(!is.na(disciplina))%>%
+  filter(! disciplina %in% c("administración)", "contabilidad"),
+         !is.na(disciplina)) %>%
   group_by(disciplina) %>%
   summarise(cantidad = n())  
 
-```
+disc_grup <- disciplinas %>%
+  arrange(desc(cantidad)) %>%
+  mutate(disc_grupo = case_when(disciplina == "matemáticas o estadística" ~ "Exactas",
+                                disciplina == "computación/informática/sistemas" ~ "Exactas",
+                                str_detect(disciplina, "programación") ~ "Exactas",
+                                str_detect(disciplina,"ingeniería") ~ "Ingeniería",
+                                disciplina == "computación/informática/sistemas" ~ "Exactas",
+                                disciplina == "bio" ~ "Naturales",
+                                disciplina == "física" ~ "Naturales",
+                                disciplina == "química" ~ "Naturales",
+                                disciplina == "geología" ~ "Naturales",
+                                disciplina == "ciencias del ambiente" ~ "Naturales",
+                                disciplina == "ciencias naturales" ~ "Naturales",
+                                disciplina == "comunicación" ~ "Sociales",
+                                disciplina == "ciencias sociales" ~ "Sociales",
+                                disciplina == "ciencias políticas" ~ "Sociales",
+                                disciplina == "periodismo" ~ "Sociales",
+                                disciplina == "económicas (economía" ~ "Económicas",
+                                disciplina == "letras" ~ "Humanidades",
+                                disciplina == "historia" ~ "Humanidades",
+                                disciplina == "filosofía" ~ "Humanidades",
+                                disciplina == "humanidades" ~ "Humanidades",
+                                str_detect(disciplina, "psicología") ~ "Humanidades",
+                                disciplina == "artísticas" ~ "Artísticas",
+                                disciplina == "diseño" ~ "Artísticas",
+                                disciplina == "arquitectura" ~ "Artísticas",
+                                disciplina == "idiomas" ~ "Idiomas",
+                                disciplina == "idioma" ~ "Idiomas",
+                                disciplina == "inglés" ~ "Idiomas",
+  )) %>%
+  group_by(disc_grupo) %>%
+  summarise(cant_grupo = sum(cantidad)) %>%
+  drop_na()
 
-Metadocencia nace de una necesidad, pero sobre todo de la capacidad y ganas de ayudar. La comunidad ya cuenta con `r signif(interes,digits = 2)` profesionales que se sumaron a la propuesta desde distintas partes del mundo.
-
-A `r lubridate::month(lubridate::today()) - 3`  meses del comienzo, la comunidad cuenta con `r asistieron` docentes que ya tomaron este curso y que, sumado a más de `r (interes - asistieron)` que ya se preinscribieron, hacen más de `r interes` profesionales que son parte de la iniciativa.
-
-
-```{r mapamundo, echo=FALSE, message=FALSE, warning=FALSE}
-mapamundi = ne_countries(scale = "medium", returnclass = "sf") 
-
-mapping_paisES_iso3 <- read_csv(here::here("data", "mapping_ES_iso.csv"))
-
-mapamundi <- mapamundi %>%
-  mutate(metadocencia = iso_a3 %in% pull(filter(mapping_paisES_iso3, pais %in% paises_metadocencia), iso))
-
-
-
-ggplot() +
-  geom_sf(data = mapamundi, alpha = 1, aes(fill = metadocencia), color = "gray") +
-  theme_map() +
-  labs(title = paste0("Demostraron interés ", interes, " docentes de ", length(paises_metadocencia), " paises"),
-       subtitle = "",
-       x = "",
-       y = "") +
-  scale_fill_manual(values = c("gray88", "#c83737")) +
-  ylim(-55, 90) +
-  theme(legend.position = "none",
-        plot.title = element_text(face = "bold")) 
-
+disc_grup %>%
+  ggplot(aes(fct_reorder(disc_grupo, cant_grupo), cant_grupo)) +
+  geom_bar(stat = "identity",fill="#F26E22") +
+  ggtitle("Las disciplinas más enseñadas en nuestra comunidad")+
+  xlab("") +
+  ylab("Cantidad") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_minimal() +
+  theme(plot.title = element_text(family = "Arial Rounded MT Bold"))
+ggsave("barplot_disciplinas.png", dpi = 400, height = 5, width = 5)
 ```
